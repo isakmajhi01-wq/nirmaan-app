@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nirmaan — AI Image & Video Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0F1014; color: #F2F1F5; font-family: 'Inter', sans-serif; min-height: 100vh; }
+  .app { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, #7C5CFC, #4CEBC4); }
+  .brand h1 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand span { font-size: 12px; color: #8A8D98; display: block; }
+  .tabs { display: flex; gap: 4px; background: #17181F; border: 1px solid #23242D; border-radius: 10px; padding: 4px; }
+  .tab-btn { border: none; background: transparent; color: #8A8D98; font-family: 'Inter'; font-size: 13px; font-weight: 500; padding: 8px 18px; border-radius: 7px; cursor: pointer; transition: all .15s ease; }
+  .tab-btn.active { background: #24252F; color: #F2F1F5; }
+  .tab-btn.active.video { color: #4CEBC4; }
+  .tab-btn.active.image { color: #A995FF; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: #17181F; border: 1px solid #23242D; border-radius: 14px; padding: 20px; }
+  .field-label { font-size: 12px; color: #8A8D98; font-weight: 500; margin-bottom: 8px; display: block; }
+  textarea, select { width: 100%; background: #0F1014; border: 1px solid #2A2B36; color: #F2F1F5; border-radius: 8px; padding: 11px 12px; font-family: 'Inter'; font-size: 13.5px; resize: none; outline: none; }
+  textarea:focus, select:focus { border-color: #7C5CFC; }
+  textarea { height: 88px; line-height: 1.5; }
+  .field { margin-bottom: 18px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid #2A2B36; background: #0F1014; color: #B4B4BE; font-size: 12px; padding: 6px 12px; border-radius: 999px; cursor: pointer; transition: all .15s; }
+  .chip.selected.image { border-color: #7C5CFC; color: #A995FF; background: #1B1730; }
+  .chip.selected.video { border-color: #1D9E75; color: #4CEBC4; background: #10231C; }
+  .generate-btn { width: 100%; border: none; padding: 13px; border-radius: 9px; font-weight: 600; font-family: 'Space Grotesk'; font-size: 14px; cursor: pointer; margin-top: 6px; transition: opacity .15s; }
+  .generate-btn.image { background: #7C5CFC; color: #0F1014; }
+  .generate-btn.video { background: #4CEBC4; color: #0F1014; }
+  .generate-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .notice { font-size: 11.5px; color: #6B6D78; margin-top: 14px; line-height: 1.6; border-top: 1px solid #23242D; padding-top: 14px; }
+  .canvas-area { min-height: 460px; display: flex; flex-direction: column; }
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #4E505B; gap: 10px; }
+  .empty-state svg { opacity: .4; }
+  .empty-state p { font-size: 13.5px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .card { background: #0F1014; border: 1px solid #23242D; border-radius: 12px; overflow: hidden; }
+  .card canvas, .card .thumb { width: 100%; display: block; aspect-ratio: 1/1; }
+  .card.video .thumb { aspect-ratio: 16/9; position: relative; display: flex; align-items: center; justify-content: center; }
+  .play-icon { width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+  .card-body { padding: 10px 12px; }
+  .card-body p { font-size: 12px; color: #C6C6CE; line-height: 1.4; max-height: 34px; overflow: hidden; }
+  .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #2A2B36; border-top-color: #7C5CFC; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .status-row span { font-size: 12.5px; color: #8A8D98; }
+  ::selection { background: #7C5CFC44; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <h1>Nirmaan</h1>
+        <span>AI image aur video studio</span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active image" id="tabImageBtn" onclick="setMode('image')">Image</button>
+      <button class="tab-btn" id="tabVideoBtn" onclick="setMode('video')">Video</button>
+    </div>
+  </header>
+  <div class="layout">
+    <div class="panel">
+      <div class="field">
+        <label class="field-label">Prompt</label>
+        <textarea id="promptInput" placeholder="Jaise: ek purani havelii, barish me, cinematic roshni"></textarea>
+      </div>
+      <div class="field">
+        <label class="field-label" id="styleLabel">Style</label>
+        <div class="chip-row" id="styleChips"></div>
+      </div>
+      <div class="field" id="durationField" style="display:none;">
+        <label class="field-label">Duration</label>
+        <select id="durationSelect">
+          <option>3 second</option>
+          <option>5 second</option>
+          <option>8 second</option>
+        </select>
+      </div>
+      <button class="generate-btn image" id="generateBtn" onclick="generate()">Generate karo</button>
+      <div class="notice" id="noticeText"></div>
+    </div>
+    <div class="panel canvas-area">
+      <div class="status-row" id="statusRow" style="display:none;">
+        <div class="spinner"></div>
+        <span id="statusText"></span>
+      </div>
+      <div class="empty-state" id="emptyState">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4E505B" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.8"/><path d="M21 15l-5-5-9 9"/></svg>
+        <p id="emptyText">Prompt likho aur generate dabao — yahan preview banega</p>
+      </div>
+      <div class="grid" id="resultsGrid"></div>
+    </div>
+  </div>
+</div>
+<script>
+let mode = 'image';
+let selectedStyle = { image: 'Realistic', video: 'Cinematic' };
+const styles = { image: ['Realistic', 'Anime', '3D render', 'Watercolor', 'Cyberpunk', 'Minimal'], video: ['Cinematic', 'Slow motion', 'Anime', 'Documentary', 'Dreamy'] };
+function renderChips() {
+  const row = document.getElementById('styleChips');
+  row.innerHTML = '';
+  styles[mode].forEach(s => {
+    const c = document.createElement('div');
+    c.className = 'chip' + (s === selectedStyle[mode] ? ' selected ' + mode : '');
+    c.textContent = s;
+    c.onclick = () => { selectedStyle[mode] = s; renderChips(); };
+    row.appendChild(c);
+  });
+}
+function setMode(m) {
+  mode = m;
+  document.getElementById('tabImageBtn').className = 'tab-btn image' + (m === 'image' ? ' active' : '');
+  document.getElementById('tabVideoBtn').className = 'tab-btn video' + (m === 'video' ? ' active' : '');
+  document.getElementById('generateBtn').className = 'generate-btn ' + m;
+  document.getElementById('generateBtn').textContent = m === 'image' ? 'Image generate karo' : 'Video generate karo';
+  document.getElementById('durationField').style.display = m === 'video' ? 'block' : 'none';
+  document.getElementById('emptyText').textContent = m === 'image' ? 'Prompt likho aur generate dabao — yahan preview banega' : 'Prompt likho aur generate dabao — yahan video preview banega';
+  document.getElementById('noticeText').innerHTML = m === 'image' ? 'Real AI se image banti hai (Flux model, Replicate ke zariye). Deploy karne ke baad REPLICATE_API_TOKEN environment variable set karo.' : 'Real AI se video banta hai (Kling model, Replicate ke zariye). Video banne me 1-2 minute lag sakte hain.';
+  renderChips();
+}
+function addCard(mode, prompt, mediaUrl) {
+  const grid = document.getElementById('resultsGrid');
+  const card = document.createElement('div');
+  card.className = 'card' + (mode === 'video' ? ' video' : '');
+  if (mode === 'image') {
+    card.innerHTML = '<img src="' + mediaUrl + '" class="thumb" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;">' + '<div class="card-body"><p>' + prompt + '</p></div>';
+  } else {
+    card.innerHTML = '<video src="' + mediaUrl + '" class="thumb" style="width:100%;aspect-ratio:16/9;object-fit:cover;" controls></video>' + '<div class="card-body"><p>' + prompt + '</p></div>';
+  }
+  grid.prepend(card);
+}
+async function pollVideo(id, prompt) {
+  const statusText = document.getElementById('statusText');
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 4000));
+    const res = await fetch('/api/check-status?id=' + id);
+    const data = await res.json();
+    if (data.status === 'succeeded') {
+      const url = Array.isArray(data.output) ? data.output[0] : data.output;
+      addCard('video', prompt, url);
+      return;
+    }
+    if (data.status === 'failed' || data.error) { throw new Error(data.error || 'Video generation fail hua'); }
+    statusText.textContent = 'Video generate ho raha hai… (' + data.status + ')';
+  }
+  throw new Error('Timeout — video banane me zyada waqt lag raha hai');
+}
+async function generate() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  const errEl = document.getElementById('promptInput');
+  if (!prompt) { errEl.style.borderColor = '#E24B4A'; errEl.placeholder = 'Pehle prompt likho'; return; }
+  errEl.style.borderColor = '';
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('statusRow').style.display = 'flex';
+  document.getElementById('statusText').textContent = mode === 'image' ? 'Image generate ho rahi hai…' : 'Video generate ho raha hai…';
+  try {
+    if (mode === 'image') {
+      const res = await fetch('/api/generate-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, style: selectedStyle.image }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Image generate nahi ho payi');
+      addCard('image', prompt, data.imageUrl);
+    } else {
+      const res = await fetch('/api/generate-video', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, style: selectedStyle.video }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Video generate nahi ho payi');
+      await pollVideo(data.id, prompt);
+    }
+  } catch (err) {
+    document.getElementById('statusText').textContent = '';
+    alert(err.message);
+  } finally {
+    document.getElementById('statusRow').style.display = 'none';
+    btn.disabled = false;
+  }
+}
+setMode('image');
+</script>
+</body>
+</html>
